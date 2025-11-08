@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rust Server</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: url('https://bogatyr.club/uploads/posts/2023-02/3275/thumbs/1675493528_bogatyr-club-p-rust-fon-foni-5.png') no-repeat center center fixed;
+      background-size: cover;
+      color: white;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 0;
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      padding: 15px;
+      z-index: 10;
+      backdrop-filter: blur(4px);
+    }
+
+    header a {
+      color: white;
+      text-decoration: none;
+      font-size: 18px;
+      transition: color 0.3s;
+    }
+
+    header a:hover {
+      color: #ff6600;
+    }
+
+    main {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+      flex-direction: column;
+      padding-top: 80px;
+    }
+
+    .box {
+      background: rgba(0,0,0,0.7);
+      padding: 30px;
+      border-radius: 12px;
+      max-width: 800px;
+      width: 90%;
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+
+    input, textarea {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+
+    button {
+      background: #ff6600;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #ff8533;
+    }
+
+    .hidden { display: none; }
+
+    #cooldown {
+      color: #ffcc00;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    a.discord {
+      color: #ff6600;
+      font-size: 18px;
+      text-decoration: none;
+    }
+
+    a.discord:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="#" onclick="showPage('home')">Главная</a>
+    <a href="#" onclick="showPage('report')">Репорт</a>
+    <a href="#" onclick="showPage('donate')">Донат</a>
+  </header>
+
+  <main>
+    <div id="home" class="box">
+      <h2>Rust Server</h2>
+      <p>
+        Всем привет! Сервер уже в разработке и запустится через неделю, точную дату не скажу!<br>
+        В день запуска сервера мы устроим грандиозную вечеринку и раздадим ресурсы. Будет очень весело! Заходите!
+      </p>
+      <p>
+        Hey everyone! The server is already in development and will launch in a week, but I won't give you the exact date!<br>
+        On the server launch day, we'll be throwing a huge party and handing out resources. It'll be a lot of fun! Come join us!
+      </p>
+      <p>
+        Всім привіт! Сервер вже в розробці і запуститься за тиждень, точну дату не скажу!<br>
+        У день запуску сервера ми влаштуємо грандіозну вечірку та роздамо ресурси. Буде дуже весело! Заходьте!
+      </p>
+      <a href="https://discord.gg/JhsmPraG" target="_blank" class="discord">Наш Discord</a>
+    </div>
+
+    <div id="report" class="box hidden">
+      <h2>Репорт</h2>
+      <p>Напиши свой Discord и опиши проблему. Репорт придёт модераторам!</p>
+      <input type="text" id="discord" placeholder="Твой Discord (например: name#1234)">
+      <textarea id="message" rows="5" placeholder="Твоя жалоба или сообщение"></textarea>
+      <button id="reportBtn" onclick="sendReport()">Отправить</button>
+      <p id="status"></p>
+      <p id="cooldown"></p>
+    </div>
+
+    <div id="donate" class="box hidden">
+      <h2>Донат</h2>
+      <p>Пока что тут ничего нет, но скоро всё будет 😉</p>
+    </div>
+  </main>
+
+  <script>
+    function showPage(id) {
+      document.querySelectorAll('.box').forEach(b => b.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    const cooldownTime = 5 * 60 * 1000;
+
+    function checkCooldown() {
+      const lastReport = localStorage.getItem('lastReport');
+      const cooldownDisplay = document.getElementById('cooldown');
+      const button = document.getElementById('reportBtn');
+
+      if (lastReport) {
+        const remaining = cooldownTime - (Date.now() - parseInt(lastReport));
+        if (remaining > 0) {
+          button.disabled = true;
+          updateCooldownDisplay(remaining / 1000);
+          const interval = setInterval(() => {
+            const newRemaining = cooldownTime - (Date.now() - parseInt(localStorage.getItem('lastReport')));
+            if (newRemaining <= 0) {
+              clearInterval(interval);
+              cooldownDisplay.textContent = "";
+              button.disabled = false;
+            } else {
+              updateCooldownDisplay(newRemaining / 1000);
+            }
+          }, 1000);
+        }
+      }
+    }
+
+    function updateCooldownDisplay(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const sec = Math.floor(seconds % 60);
+      document.getElementById('cooldown').textContent = `⏳ Подождите ${minutes}:${sec.toString().padStart(2, '0')} перед следующим репортом`;
+    }
+
+    async function sendReport() {
+      const discord = document.getElementById('discord').value.trim();
+      const message = document.getElementById('message').value.trim();
+      const status = document.getElementById('status');
+      const button = document.getElementById('reportBtn');
+
+      const lastReport = localStorage.getItem('lastReport');
+      if (lastReport && Date.now() - parseInt(lastReport) < cooldownTime) {
+        status.textContent = "⚠️ Подожди 5 минут перед отправкой следующего репорта!";
+        return;
+      }
+
+      if (!discord || !message) {
+        status.textContent = "⚠️ Пожалуйста, заполни все поля.";
+        return;
+      }
+
+      const webhook = "https://discord.com/api/webhooks/1436850773194571887/gbtbl3RTMl7QhzCn5AsvOR3LnzMwL65Nj7jlBSbNxZbv0HXCxfDnXNNTB3aTQsehLwA1";
+      const content = `📢 **Новый репорт:**\n**От:** ${discord}\n**Сообщение:** ${message}`;
+
+      try {
+        await fetch(webhook, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content })
+        });
+        status.textContent = "✅ Репорт отправлен!";
+        localStorage.setItem('lastReport', Date.now());
+        document.getElementById('discord').value = "";
+        document.getElementById('message').value = "";
+        button.disabled = true;
+        checkCooldown();
+      } catch (err) {
+        status.textContent = "❌ Ошибка отправки!";
+      }
+    }
+
+    checkCooldown();
+  </script>
+</body>
+</html>
